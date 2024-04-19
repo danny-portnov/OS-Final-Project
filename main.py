@@ -102,21 +102,25 @@ def calc_capacitance(chip_arr: List[List[str]], cap_in_q: JoinableQueue, cap_out
 
 if __name__ == '__main__':
 
-    n_of_cpu = int(input("Enter the number of CPUs: "))
+    # n_of_cpu = int(input("Enter the number of CPUs: "))
+    n_of_cpu = 2  # For debug
     files = [f for f in os.listdir(os.path.join(
-        os.getcwd(), 'sample_circuits_v1')) if f.endswith('.dat')]
+        os.getcwd(), 'working_circuits_0104')) if f.endswith('.dat')]
     for file in files:
         p_list = list()
         in_q: Queue = Queue()
         out_q: Queue = Queue()
 
         # -------------- read file -------------------------------
-        f = open(os.path.join(os.getcwd(), 'sample_circuits_v1', file), 'r')
-        l = f.readline().split()  # first line contains the chip's size
-        # create 2D-array corresponding to the size of the chip
-        chip_arr = [["-" for i in range(int(l[1])+1)]
-                    for j in range(int(l[2])+1)]
+        f = open(os.path.join(os.getcwd(), 'working_circuits_0104', file), 'r')
         lines = f.readlines()
+        if "ChipSize" not in lines[0]:
+            print("Error: Add ChipSize to the file")
+            sys.exit(1)  # first line contains the chip's size
+        # create 2D-array corresponding to the size of the chip
+        size = lines[0].split()
+        chip_arr: list[list[str]] = [["-" for _ in range(int(size[1])+1)]
+                                     for _ in range(int(size[2])+1)]
         nets: List[tuple[int, list[str]]] = [
             (0, []) for i in range(len(lines))]
         tot_resistance = [0 for i in range(len(lines))]
