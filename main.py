@@ -121,10 +121,11 @@ if __name__ == '__main__':
         size = lines[0].split()
         chip_arr: list[list[str]] = [["-" for _ in range(int(size[1])+1)]
                                      for _ in range(int(size[2])+1)]
+        lines.pop(0)  # remove the first line
         nets: List[tuple[int, list[str]]] = [
-            (0, []) for i in range(len(lines))]
-        tot_resistance = [0 for i in range(len(lines))]
-        tot_capacitance = [0 for i in range(len(lines))]
+            (0, []) for _ in range(len(lines))]
+        tot_resistance = [0 for _ in range(len(lines))]
+        tot_capacitance = [0 for _ in range(len(lines))]
         idx = 0
         for line in lines:
             l = line.split()
