@@ -16,7 +16,7 @@ def calc_resistance(in_q: Queue, out_q: Queue) -> None:
         wire: List[str] = data[0]
         for idx in range(len(wire)-1):
             cord1 = [int(x) for x in wire[idx].split(',')]
-            cord2 = [int(x) for x in wire[idx].split(',')]
+            cord2 = [int(x) for x in wire[idx + 1].split(',')]
 
             dif_x = abs(cord1[0] - cord2[0])  # |(X1-X2)|
             dif_y = abs(cord1[1] - cord2[1])  # |(y1-y1)|
@@ -103,7 +103,7 @@ def calc_capacitance(chip_arr: List[List[str]], cap_in_q: JoinableQueue, cap_out
 if __name__ == '__main__':
 
     # n_of_cpu = int(input("Enter the number of CPUs: "))
-    n_of_cpu = 2  # For debug
+    n_of_cpu = 1  # For debug
     files = [f for f in os.listdir(os.path.join(
         os.getcwd(), 'sample_circuits_v1')) if f.endswith('.dat')]
     for file in files:
