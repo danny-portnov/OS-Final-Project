@@ -14,17 +14,10 @@ def calc_resistance(in_q: Queue, out_q: Queue) -> None:
         data: Tuple[List[str], int] = in_q.get()
         # data[1] = wire's index
         wire: List[str] = data[0]
-        for idx in range(len(wire)-1):
-            cord1 = [int(x) for x in wire[idx].split(',')]
-            cord2 = [int(x) for x in wire[idx + 1].split(',')]
-
-            dif_x = abs(cord1[0] - cord2[0])  # |(X1-X2)|
-            dif_y = abs(cord1[1] - cord2[1])  # |(y1-y1)|
-            if (dif_x == 0):  # Vertical segment
-                tot_res += dif_y
-
-            elif (dif_y == 0):  # Horizontal segment
-                tot_res += dif_x
+        for i in range(len(wire) - 1):
+            x1, y1 = map(int, wire[i].split(','))
+            x2, y2 = map(int, wire[i + 1].split(','))
+            tot_res += abs(x1 - x2) + abs(y1 - y2)
 
         output_data = [tot_res, data[1]]
         # transfer (calculated resistance, wire's index ) to MAIN
