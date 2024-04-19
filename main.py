@@ -146,7 +146,7 @@ if __name__ == '__main__':
         for idx in range(len(nets)):
             data = out_q.get()
             # data[0] == wire's resistance value
-            tot_resistance[data[1]] = data[0]
+            tot_resistance[data[1] - 1] = data[0]
             # data[1] == wire index
         for p in p_list:
             p.terminate()
@@ -161,8 +161,8 @@ if __name__ == '__main__':
         p = Process(target=nets2chip, args=(chip_arr, c_in_q, c_out_q))
         p.start()
 
-        for i in range(len(nets)):
-            c_in_q.put(nets[i])
+        for net in nets:
+            c_in_q.put(net)
         c_in_q.put("END")
         chip_arr = c_out_q.get()
         p.terminate()
