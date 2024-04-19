@@ -103,15 +103,15 @@ def calc_capacitance(chip_arr: List[List[str]], cap_in_q: JoinableQueue, cap_out
 if __name__ == '__main__':
 
     n_of_cpu = int(input("Enter the number of CPUs: "))
-    DB_dir = "C:\OS_PROJECT\work_circuits"
-    files = os.listdir(DB_dir)
+    files = [f for f in os.listdir(os.path.join(
+        os.getcwd(), 'sample_circuits_v1')) if f.endswith('.dat')]
     for file in files:
         p_list = list()
         in_q: Queue = Queue()
         out_q: Queue = Queue()
 
         # -------------- read file -------------------------------
-        f = open(DB_dir + '\\' + file)
+        f = open(os.path.join(os.getcwd(), 'sample_circuits_v1', file), 'r')
         l = f.readline().split()  # first line contains the chip's size
         # create 2D-array corresponding to the size of the chip
         chip_arr = [["-" for i in range(int(l[1])+1)]
