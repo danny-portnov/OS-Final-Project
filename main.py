@@ -105,14 +105,14 @@ if __name__ == '__main__':
     # n_of_cpu = int(input("Enter the number of CPUs: "))
     n_of_cpu = 2  # For debug
     files = [f for f in os.listdir(os.path.join(
-        os.getcwd(), 'working_circuits_0104')) if f.endswith('.dat')]
+        os.getcwd(), 'sample_circuits_v1')) if f.endswith('.dat')]
     for file in files:
         p_list = list()
         in_q: Queue = Queue()
         out_q: Queue = Queue()
 
         # -------------- read file -------------------------------
-        f = open(os.path.join(os.getcwd(), 'working_circuits_0104', file), 'r')
+        f = open(os.path.join(os.getcwd(), 'sample_circuits_v1', file), 'r')
         lines = f.readlines()
         if "ChipSize" not in lines[0]:
             print("Error: Add ChipSize to the file")
