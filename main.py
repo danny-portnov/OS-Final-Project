@@ -4,23 +4,22 @@ import os
 import sys
 import re
 from multiprocessing import Process, Queue, JoinableQueue
+from typing import List, Tuple
 
 
-def calc_resistance(in_q, out_q):
+def calc_resistance(in_q: Queue, out_q: Queue) -> None:
     while True:
         tot_res = 0
-        data = in_q.get()  # data[0] = cordinations of the wire
+        # data[0] = cordinations of the wire
+        data: Tuple[List[str], int] = in_q.get()
         # data[1] = wire's index
-        wire = data[0]
+        wire: List[str] = data[0]
         for idx in range(len(wire)-1):
-            cord1 = wire[idx].split(',')
-            cord2 = wire[idx + 1].split(',')
-            cord1[0], cord1[1] = int(cord1[0]), int(cord1[1])
-            cord2[0], cord2[1] = int(cord2[0]), int(cord2[1])
+            cord1 = [int(x) for x in wire[idx].split(',')]
+            cord2 = [int(x) for x in wire[idx].split(',')]
 
             dif_x = abs(cord1[0] - cord2[0])  # |(X1-X2)|
             dif_y = abs(cord1[1] - cord2[1])  # |(y1-y1)|
-            arr_q_data = [cord1, "-"]
             if (dif_x == 0):  # Vertical segment
                 tot_res += dif_y
 
@@ -32,9 +31,9 @@ def calc_resistance(in_q, out_q):
         out_q.put(output_data)
 
 
-def nets2chip(chip_arr, n_nets, c_in_q, c_out_q):
+def nets2chip(chip_arr: List[List[tuple[str, int]]], c_in_q: Queue, c_out_q: Queue) -> None:
     while True:
-        net = c_in_q.get()
+        net: tuple[int, list[str]] = c_in_q.get()
         if net == "END":
             break
         net_idx = net[0]
@@ -68,7 +67,7 @@ def nets2chip(chip_arr, n_nets, c_in_q, c_out_q):
     c_out_q.put(chip_arr)
 
 
-def calc_capacitance(chip_arr, tot_capacitance, cap_in_q, cap_out_q):
+def calc_capacitance(chip_arr: List[List[str]], cap_in_q: JoinableQueue, cap_out_q: JoinableQueue) -> None:
     while True:
         cord = cap_in_q.get()
         x_idx, y_idx = cord[0], cord[1]
@@ -107,10 +106,9 @@ if __name__ == '__main__':
     DB_dir = "C:\OS_PROJECT\work_circuits"
     files = os.listdir(DB_dir)
     for file in files:
-        # if file == files[0] or file == files[1]: continue
         p_list = list()
-        in_q = Queue()
-        out_q = Queue()
+        in_q: Queue = Queue()
+        out_q: Queue = Queue()
 
         # -------------- read file -------------------------------
         f = open(DB_dir + '\\' + file)
@@ -119,7 +117,8 @@ if __name__ == '__main__':
         chip_arr = [["-" for i in range(int(l[1])+1)]
                     for j in range(int(l[2])+1)]
         lines = f.readlines()
-        nets = [(0, 0) for i in range(len(lines))]
+        nets: List[tuple[int, list[str]]] = [
+            (0, []) for i in range(len(lines))]
         tot_resistance = [0 for i in range(len(lines))]
         tot_capacitance = [0 for i in range(len(lines))]
         idx = 0
@@ -157,11 +156,11 @@ if __name__ == '__main__':
         # -------------------------------------------------------------
         print("finished calc res")
         # ---------------- chip array -------------------
-        c_p_list = list()
-        c_in_q = Queue()
-        c_out_q = Queue()
+        # c_p_list = list()
+        c_in_q: Queue = Queue()
+        c_out_q: Queue = Queue()
         n_nets = len(nets)
-        p = Process(target=nets2chip, args=(chip_arr, n_nets, c_in_q, c_out_q))
+        p = Process(target=nets2chip, args=(chip_arr, c_in_q, c_out_q))
         p.start()
 
         for i in range(len(nets)):
@@ -173,11 +172,11 @@ if __name__ == '__main__':
         print("finished chip arr")
         # --------- processes for capacitnace calculations----------
         cap_p_list = list()
-        cap_in_q = JoinableQueue()
-        cap_out_q = JoinableQueue()
-        for p in range(n_of_cpu):
+        cap_in_q: JoinableQueue = JoinableQueue()
+        cap_out_q: JoinableQueue = JoinableQueue()
+        for _ in range(n_of_cpu):
             p = Process(target=calc_capacitance, args=(
-                chip_arr, tot_capacitance, cap_in_q, cap_out_q))
+                chip_arr, cap_in_q, cap_out_q))
             p.start()
             cap_p_list.append(p)
         for x_idx in range(len(chip_arr)):
