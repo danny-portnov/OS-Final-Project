@@ -89,7 +89,7 @@ def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
             max_y = max(y[i], y[i-1])
             if vertical:
                 # summing capacity 4 columns to the left and right of the vertical line
-                for column in range(max(0, min_x-4), min(min_x+4, size_x)+1):
+                for column in range(max(0, min_x-4), min(min_x+5, size_x)):
                     # Skip the column of the current wire
                     if column == min_x:
                         continue
@@ -97,7 +97,7 @@ def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
                         cap += verticalMatrix[row][column]
             else:
                 # summing capacity 4 rows to the top and bottom of the horizontal line
-                for row in range(max(0, min_y-4), min(min_y+4, size_y)+1):
+                for row in range(max(0, min_y-4), min(min_y+5, size_y)):
                     # Skip the row of the current wire
                     if row == min_y:
                         continue
@@ -139,15 +139,15 @@ def write_to_file(filename, results_q):
 
 def main():
     # cpu_num = int(input("Enter the number of CPUs to use: "))
-    cpu_num = 1  # For debug
+    cpu_num = 2  # For debug
     files = [f for f in os.listdir(os.path.join(
-        os.getcwd(), 'sample_circuits_v1')) if f.endswith('.dat')]
+        os.getcwd(), 'working_circuits_0104')) if f.endswith('.dat')]
     start = time.time()
     processes = []
     wires_q = JoinableQueue()
     results_q = Queue()
     for filename in files:
-        filePath = os.path.join(os.getcwd(), 'sample_circuits_v1', filename)
+        filePath = os.path.join(os.getcwd(), 'working_circuits_0104', filename)
         with open(filePath) as f:
             print(f"File {filename} loaded successfully")
             _, x_size, y_size = next(f).strip().split()
