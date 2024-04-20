@@ -10,28 +10,15 @@ file_lock = Lock()
 # reading wires from file so each thread reads one line at a given time (with file_lock for sync)
 
 
-def read_wire(file_handler, wires_q, verticalMatrix, hortizontalMatrix):
+def InitMatricesAndCalResistance(fileQ, wires_q, verticalMatrix, hortizontalMatrix):
     while True:
         x_vector = []
         y_vector = []
         wire_r = 0
-        file_lock.acquire()
-        ####################################
-        # critical section - file reading lock is added
-        try:
-            line = next(file_handler)
-        except StopIteration:
-            break
-        finally:
-            file_lock.release()
-
-        ####################################
-        wire_r = 0
         # fields - "(0,20),(20,20),(20,48),(48,48),(48,32)" for example
-        wire_name, fields = line.strip().split()
+        wire_name, fields = fileQ.get()
         # vector - ["0,20","20,20","20,48","48,48","48,32"] for example
         vector = fields[1:-1].split('),(')
-
         for v in vector:
             x, y = v.split(',')
             x_vector.append(int(x))
@@ -48,8 +35,6 @@ def read_wire(file_handler, wires_q, verticalMatrix, hortizontalMatrix):
                 # inserting 1's in (L x 1) segment
                 for column in range(min_x, max_x):
                     hortizontalMatrix[y_vector[i]][column] = 1
-                # hortizontalMatrix[y_vector[i]][min_x:max_x] = [
-                #     1] * (max_x - min_x)
 
             # vertical line
             else:
@@ -60,6 +45,13 @@ def read_wire(file_handler, wires_q, verticalMatrix, hortizontalMatrix):
                     verticalMatrix[row][x_vector[i]] = 1
 
         wires_q.put((wire_name, wire_r, (x_vector, y_vector)))
+        fileQ.task_done()
+
+
+def read_wire(file_handler, fileQ):
+    for line in file_handler:
+        fileQ.put(line.strip().split())
+
 
 # calculating capacitance of wires with threads so each thread works on one wire
 # at a given time
@@ -146,6 +138,7 @@ def main():
     processes = []
     wires_q = JoinableQueue()
     results_q = Queue()
+    fileQ = JoinableQueue()
     for filename in files:
         filePath = os.path.join(os.getcwd(), 'working_circuits_0104', filename)
         with open(filePath) as f:
@@ -161,20 +154,23 @@ def main():
             hortizontalMatrix = [[0 for _ in range(int(y_size))]
                                  for _ in range(int(x_size))]
             print("Reading wires from file...")
+            readProcess = Process(target=read_wire, args=(f, fileQ))
+            readProcess.start()  # todo: if terminate is not needed, do it one line
             processes = []
             for _ in range(cpu_num):
-                p = Thread(target=read_wire, args=(
-                    f, wires_q, verticalMatrix, hortizontalMatrix))
+                p = Process(target=InitMatricesAndCalResistance, args=(
+                    fileQ, wires_q, verticalMatrix, hortizontalMatrix))
                 p.start()
                 processes.append(p)
+            fileQ.join()
             for p in processes:
-                p.join()
+                p.terminate()
             print("Finished reading from file")
             print("Calculating capacitance...")
             t_list2 = []
     # num_wires = wires_q.qsize()
             for _ in range(cpu_num):
-                p = Thread(target=calc_cap, args=(
+                p = Process(target=calc_cap, args=(
                     wires_q, results_q, verticalMatrix, hortizontalMatrix))
                 p.start()
                 t_list2.append(p)
