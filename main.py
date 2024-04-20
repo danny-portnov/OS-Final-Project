@@ -10,8 +10,7 @@ file_lock = Lock()
 # reading wires from file so each thread reads one line at a given time (with file_lock for sync)
 
 
-def read_wire(file_handler, wires_q):
-    global matrix
+def read_wire(file_handler, wires_q, verticalMatrix, hortizontalMatrix):
     while True:
         x_vector = []
         y_vector = []
@@ -47,14 +46,18 @@ def read_wire(file_handler, wires_q):
                 min_x = min(x_vector[i], x_vector[i-1])
                 max_x = max(x_vector[i], x_vector[i-1])
                 # inserting 1's in (L x 1) segment
-                matrix[min_x:max_x, y_vector[i], 0] = [1] * (max_x - min_x)
+                for column in range(min_x, max_x):
+                    hortizontalMatrix[y_vector[i]][column] = 1
+                # hortizontalMatrix[y_vector[i]][min_x:max_x] = [
+                #     1] * (max_x - min_x)
 
             # vertical line
             else:
                 min_y = min(y_vector[i], y_vector[i-1])
                 max_y = max(y_vector[i], y_vector[i-1])
                 # inserting 1's in (1 x L) segment
-                matrix[x_vector[i], min_y:max_y, 1] = [1] * (max_y - min_y)
+                for row in range(min_y, max_y):
+                    verticalMatrix[row][x_vector[i]] = 1
 
         wires_q.put((wire_name, wire_r, (x_vector, y_vector)))
 
@@ -62,8 +65,7 @@ def read_wire(file_handler, wires_q):
 # at a given time
 
 
-def calc_cap(wires_q, results_q):
-    global matrix
+def calc_cap(wires_q, results_q, matrix):
     s = matrix.shape
     size_x = s[0]
     size_y = s[1]
@@ -132,50 +134,57 @@ def write_to_file(filename, results_q):
 
 
 def main():
-    cpu_num = int(input("Enter the number of CPUs to use: "))
+    # cpu_num = int(input("Enter the number of CPUs to use: "))
+    cpu_num = 1  # For debug
+    files = [f for f in os.listdir(os.path.join(
+        os.getcwd(), 'sample_circuits_v1')) if f.endswith('.dat')]
     start = time.time()
-    t_list = []
+    processes = []
     wires_q = JoinableQueue()
     results_q = Queue()
-    filename = "cir20000.dat"
+    for filename in files:
+        filePath = os.path.join(os.getcwd(), 'sample_circuits_v1', filename)
+        with open(filePath) as f:
+            print(f"File {filename} loaded successfully")
+            _, x_size, y_size = next(f).strip().split()
 
-    with open(filename) as f:
-        print(f"File {filename} loaded successfully")
-        chip_line = next(f)
-        _, x_size, y_size = chip_line.strip().split()
+            # 2 matrices with (x_size x y_size) shape for sharing between threads
+            # one is for horizontal lines and the other is for vertical lines
+            # we'll use them for calculating the capacitance of each wire
 
-        # 2 matrices with (x_size x y_size) shape for sharing between threads
-        # one is for horizontal lines and the other is for vertical lines
-        # we'll use them for calculating the capacitance of each wire
+            verticalMatrix = [[0 for _ in range(int(y_size))]
+                              for _ in range(int(x_size))]
+            hortizontalMatrix = [[0 for _ in range(int(y_size))]
+                                 for _ in range(int(x_size))]
+            print("Reading wires from file...")
+            processes = []
+            for _ in range(cpu_num):
+                p = Thread(target=read_wire, args=(
+                    f, wires_q, verticalMatrix, hortizontalMatrix))
+                p.start()
+                processes.append(p)
+            for p in processes:
+                p.join()
+            print("Finished reading from file")
+            print("Calculating capacitance...")
+            t_list2 = []
+    # num_wires = wires_q.qsize()
+            for _ in range(cpu_num):
+                p = Thread(target=calc_cap, args=(
+                    wires_q, results_q, verticalMatrix, hortizontalMatrix))
+                p.start()
+                t_list2.append(p)
 
-        global matrix
-        matrix = np.zeros((int(x_size), int(y_size), 2))
-        print("Reading wires from file...")
-        t_list = []
-        for idx in range(cpu_num):
-            t = Thread(target=read_wire, args=(f, wires_q))
-            t.start()
-            t_list.append(t)
-        for t in t_list:
-            t.join()
-        print("Finished reading from file")
-        print("Calculating capacitance...")
-        t_list2 = []
-# num_wires = wires_q.qsize()
-        for i in range(cpu_num):
-            t = Thread(target=calc_cap, args=(wires_q, results_q))
-            t.start()
-            t_list2.append(t)
+            wires_q.join()
+            print("Finished calculating capacitance")
+            for p in t_list2:
+                wires_q.put("END")
 
-        wires_q.join()
-        print("Finished calculating capacitance")
-        for p in t_list2:
-            wires_q.put("END")
-
-        t_results = Thread(target=write_to_file, args=(filename, results_q))
-        t_results.start()
-        results_q.put("END")
-        t_results.join()
+            t_results = Thread(target=write_to_file,
+                               args=(filename, results_q))
+            t_results.start()
+            results_q.put("END")
+            t_results.join()
     print("in ", time.time() - start, " seconds")
 
 
