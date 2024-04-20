@@ -46,24 +46,31 @@ def InitMatricesAndCalResistance(fileQ, wires_q, verticalMatrix, hortizontalMatr
 
         wires_q.put((wire_name, wire_r, (x_vector, y_vector)))
         fileQ.task_done()
+        print(f"Wire {wire_name} calculated")
 
 
 def read_wire(file_handler, fileQ):
     for line in file_handler:
         fileQ.put(line.strip().split())
+    print("Finished reading from file")
 
 
 # calculating capacitance of wires with threads so each thread works on one wire
 # at a given time
 
 
-def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
+def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatrix):
     # The x dimension of the matrix is the length of some row
     size_x = len(verticalMatrix[0])
     # The y dimension of the matrix is the amount of rows
     size_y = len(verticalMatrix)
     while True:
-        wire = wires_q.get()
+        try:
+            wire = wires_q.get(timeout=15)
+            print(f"Got wire {wire[0]}'s for capacitance")
+        except:
+            print("Timeout")
+            break
         cap = 0
         wire_name = wire[0]
         wire_res = wire[1]
@@ -95,6 +102,8 @@ def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
 
         results_q.put((wire_name, wire_res, cap))
         wires_q.task_done()
+        time.sleep(0.001)
+        print(f"Wire {wire_name}'s capacitance calculated")
 
 # writing to file the resistance and capacitance of each wire
 
@@ -132,11 +141,12 @@ def main():
     files = [f for f in os.listdir(os.path.join(
         os.getcwd(), 'working_circuits_0104')) if f.endswith('.dat')]
     start = time.time()
-    processes = []
-    wires_q = JoinableQueue()
-    results_q = Queue()
-    fileQ = JoinableQueue()
+
     for filename in files:
+        processes = []
+        wires_q = JoinableQueue()
+        results_q = Queue()
+        fileQ = JoinableQueue()
         filePath = os.path.join(os.getcwd(), 'working_circuits_0104', filename)
         with open(filePath) as f:
             lines = f.readlines()
@@ -162,7 +172,7 @@ def main():
             fileQ.join()
             for p in processes:
                 p.terminate()
-            print("Finished reading from file")
+            readProcess.terminate()
             print("Calculating capacitance...")
             processes = []
     # num_wires = wires_q.qsize()
