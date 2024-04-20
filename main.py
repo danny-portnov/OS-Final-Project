@@ -67,6 +67,8 @@ def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatri
     while True:
         try:
             wire = wires_q.get(timeout=15)
+            if wire == 'END':
+                return
             print(f"Got wire {wire[0]}'s for capacitance")
         except:
             print("Timeout")
@@ -101,8 +103,6 @@ def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatri
                         cap += hortizontalMatrix[row][column]
 
         results_q.put((wire_name, wire_res, cap))
-        wires_q.task_done()
-        time.sleep(0.001)
         print(f"Wire {wire_name}'s capacitance calculated")
 
 # writing to file the resistance and capacitance of each wire
@@ -143,8 +143,10 @@ def main():
     start = time.time()
 
     for filename in files:
+        if filename != "cir1000.dat":
+            continue
         processes = []
-        wires_q = JoinableQueue()
+        wires_q = Queue()
         results_q = Queue()
         fileQ = JoinableQueue()
         filePath = os.path.join(os.getcwd(), 'working_circuits_0104', filename)
@@ -172,6 +174,7 @@ def main():
             fileQ.join()
             for p in processes:
                 p.terminate()
+                wires_q.put("END")
             readProcess.terminate()
             print("Calculating capacitance...")
             processes = []
@@ -184,7 +187,8 @@ def main():
             resultsProcess = Process(target=write_to_file,
                                      args=(filename, results_q))
             resultsProcess.start()
-            wires_q.join()
+            for p in processes:
+                p.join()
             results_q.put("END")
             print("Finished calculating capacitance")
             for p in processes:
