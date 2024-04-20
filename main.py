@@ -66,7 +66,7 @@ def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatri
     size_y = len(verticalMatrix)
     while True:
         try:
-            wire = wires_q.get(timeout=15)
+            wire = wires_q.get()
             if wire == 'END':
                 return
             print(f"Got wire {wire[0]}'s for capacitance")
@@ -163,29 +163,29 @@ def main():
             hortizontalMatrix = [[0 for _ in range(int(y_size))]
                                  for _ in range(int(x_size))]
             print("Reading wires from file...")
-            readProcess = Process(target=read_wire, args=(lines, fileQ))
+            readProcess = Thread(target=read_wire, args=(lines, fileQ))
             readProcess.start()  # todo: if terminate is not needed, do it one line
             processes = []
             for _ in range(cpu_num):
-                p = Process(target=InitMatricesAndCalResistance, args=(
+                p = Thread(target=InitMatricesAndCalResistance, args=(
                     fileQ, wires_q, verticalMatrix, hortizontalMatrix))
                 p.start()
                 processes.append(p)
             fileQ.join()
             for p in processes:
-                p.terminate()
+                # p.terminate()
                 wires_q.put("END")
-            readProcess.terminate()
+            # readProcess.terminate()
             print("Calculating capacitance...")
             processes = []
     # num_wires = wires_q.qsize()
             for _ in range(cpu_num):
-                p = Process(target=calc_cap, args=(
+                p = Thread(target=calc_cap, args=(
                     wires_q, results_q, verticalMatrix, hortizontalMatrix))
                 p.start()
                 processes.append(p)
-            resultsProcess = Process(target=write_to_file,
-                                     args=(filename, results_q))
+            resultsProcess = Thread(target=write_to_file,
+                                    args=(filename, results_q))
             resultsProcess.start()
             for p in processes:
                 p.join()
