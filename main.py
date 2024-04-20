@@ -64,9 +64,6 @@ def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
     size_y = len(verticalMatrix)
     while True:
         wire = wires_q.get()
-        if wire == "END":  # todo: maybe remove end if we're using joinable queue
-            wires_q.task_done()
-            return
         cap = 0
         wire_name = wire[0]
         wire_res = wire[1]
@@ -142,9 +139,9 @@ def main():
     for filename in files:
         filePath = os.path.join(os.getcwd(), 'working_circuits_0104', filename)
         with open(filePath) as f:
+            lines = f.readlines()
             print(f"File {filename} loaded successfully")
-            _, x_size, y_size = next(f).strip().split()
-
+            _, x_size, y_size = lines.pop(0).strip().split()
             # 2 matrices with (x_size x y_size) shape for sharing between threads
             # one is for horizontal lines and the other is for vertical lines
             # we'll use them for calculating the capacitance of each wire
@@ -154,7 +151,7 @@ def main():
             hortizontalMatrix = [[0 for _ in range(int(y_size))]
                                  for _ in range(int(x_size))]
             print("Reading wires from file...")
-            readProcess = Process(target=read_wire, args=(f, fileQ))
+            readProcess = Process(target=read_wire, args=(lines, fileQ))
             readProcess.start()  # todo: if terminate is not needed, do it one line
             processes = []
             for _ in range(cpu_num):
@@ -167,24 +164,23 @@ def main():
                 p.terminate()
             print("Finished reading from file")
             print("Calculating capacitance...")
-            t_list2 = []
+            processes = []
     # num_wires = wires_q.qsize()
             for _ in range(cpu_num):
                 p = Process(target=calc_cap, args=(
                     wires_q, results_q, verticalMatrix, hortizontalMatrix))
                 p.start()
-                t_list2.append(p)
-
+                processes.append(p)
+            resultsProcess = Process(target=write_to_file,
+                                     args=(filename, results_q))
+            resultsProcess.start()
             wires_q.join()
-            print("Finished calculating capacitance")
-            for p in t_list2:
-                wires_q.put("END")
-
-            t_results = Thread(target=write_to_file,
-                               args=(filename, results_q))
-            t_results.start()
             results_q.put("END")
-            t_results.join()
+            print("Finished calculating capacitance")
+            for p in processes:
+                p.terminate()
+
+            resultsProcess.join()
     print("in ", time.time() - start, " seconds")
 
 
