@@ -65,14 +65,16 @@ def read_wire(file_handler, wires_q, verticalMatrix, hortizontalMatrix):
 # at a given time
 
 
-def calc_cap(wires_q, results_q, matrix):
-    s = matrix.shape
-    size_x = s[0]
-    size_y = s[1]
+def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
+    # The x dimension of the matrix is the length of some row
+    size_x = len(verticalMatrix[0])
+    # The y dimension of the matrix is the amount of rows
+    size_y = len(verticalMatrix)
     while True:
         wire = wires_q.get()
-        if wire == "END":
-            exit(0)
+        if wire == "END":  # todo: maybe remove end if we're using joinable queue
+            wires_q.task_done()
+            return
         cap = 0
         wire_name = wire[0]
         wire_res = wire[1]
@@ -87,18 +89,24 @@ def calc_cap(wires_q, results_q, matrix):
             max_y = max(y[i], y[i-1])
             if vertical:
                 # summing capacity from the left side of the vertical line
-                cap += matrix[max(0, min_x-4):min_x,
-                              min_y:max_y, vertical].sum()
+                for column in range(max(0, min_x-4), min(min_x+4, size_x)+1):
+                    # Skip the column of the current wire
+                    if column == min_x:
+                        continue
+                    for row in range(min_y, max_y):
+                        cap += verticalMatrix[row][column]
+                # cap += verticalMatrix[max(0, min_x-4):min_x,
+                #                       min_y:max_y].sum()
                 # summing capacity from the right side of the vertical line
-                cap += matrix[min_x+1:(min(min_x+4, size_x)+1),
-                              min_y:max_y, vertical].sum()
-            else:
-                # summing capacity from the bottom side of the horizontal line
-                cap += matrix[min_x:max_x,
-                              max(0, min_y-4):min_y, vertical].sum()
-                # summing capacity from the top side of the horizontal line
-                cap += matrix[min_x:max_x, min_y +
-                              1:(min(min_y+4, size_y)+1), vertical].sum()
+                # cap += matrix[min_x+1:(min(min_x+4, size_x)+1),
+                #               min_y:max_y, vertical].sum()
+            # else:
+            #     # summing capacity from the bottom side of the horizontal line
+            #     cap += matrix[min_x:max_x,
+            #                   max(0, min_y-4):min_y, vertical].sum()
+            #     # summing capacity from the top side of the horizontal line
+            #     cap += matrix[min_x:max_x, min_y +
+            #                   1:(min(min_y+4, size_y)+1), vertical].sum()
 
         results_q.put((wire_name, wire_res, int(cap)))
         wires_q.task_done()
