@@ -82,33 +82,29 @@ def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
         y = wire[2][1]
         for i in range(1, len(x)):
             # check for line type - horizontal or vertical
-            vertical = int(x[i] == x[i-1])
+            vertical = x[i] == x[i-1]
             min_x = min(x[i], x[i-1])
             max_x = max(x[i], x[i-1])
             min_y = min(y[i], y[i-1])
             max_y = max(y[i], y[i-1])
             if vertical:
-                # summing capacity from the left side of the vertical line
+                # summing capacity 4 columns to the left and right of the vertical line
                 for column in range(max(0, min_x-4), min(min_x+4, size_x)+1):
                     # Skip the column of the current wire
                     if column == min_x:
                         continue
                     for row in range(min_y, max_y):
                         cap += verticalMatrix[row][column]
-                # cap += verticalMatrix[max(0, min_x-4):min_x,
-                #                       min_y:max_y].sum()
-                # summing capacity from the right side of the vertical line
-                # cap += matrix[min_x+1:(min(min_x+4, size_x)+1),
-                #               min_y:max_y, vertical].sum()
-            # else:
-            #     # summing capacity from the bottom side of the horizontal line
-            #     cap += matrix[min_x:max_x,
-            #                   max(0, min_y-4):min_y, vertical].sum()
-            #     # summing capacity from the top side of the horizontal line
-            #     cap += matrix[min_x:max_x, min_y +
-            #                   1:(min(min_y+4, size_y)+1), vertical].sum()
+            else:
+                # summing capacity 4 rows to the top and bottom of the horizontal line
+                for row in range(max(0, min_y-4), min(min_y+4, size_y)+1):
+                    # Skip the row of the current wire
+                    if row == min_y:
+                        continue
+                    for column in range(min_x, max_x):
+                        cap += hortizontalMatrix[row][column]
 
-        results_q.put((wire_name, wire_res, int(cap)))
+        results_q.put((wire_name, wire_res, cap))
         wires_q.task_done()
 
 # writing to file the resistance and capacitance of each wire
