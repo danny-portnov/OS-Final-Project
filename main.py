@@ -163,11 +163,11 @@ def main():
             hortizontalMatrix = [[0 for _ in range(int(y_size))]
                                  for _ in range(int(x_size))]
             print("Reading wires from file...")
-            readProcess = Thread(target=read_wire, args=(lines, fileQ))
+            readProcess = Process(target=read_wire, args=(lines, fileQ))
             readProcess.start()  # todo: if terminate is not needed, do it one line
             processes = []
             for _ in range(cpu_num):
-                p = Thread(target=InitMatricesAndCalResistance, args=(
+                p = Process(target=InitMatricesAndCalResistance, args=(
                     fileQ, wires_q, verticalMatrix, hortizontalMatrix))
                 p.start()
                 processes.append(p)
@@ -180,19 +180,19 @@ def main():
             processes = []
     # num_wires = wires_q.qsize()
             for _ in range(cpu_num):
-                p = Thread(target=calc_cap, args=(
+                p = Process(target=calc_cap, args=(
                     wires_q, results_q, verticalMatrix, hortizontalMatrix))
                 p.start()
                 processes.append(p)
-            resultsProcess = Thread(target=write_to_file,
-                                    args=(filename, results_q))
+            resultsProcess = Process(target=write_to_file,
+                                     args=(filename, results_q))
             resultsProcess.start()
             for p in processes:
                 p.join()
             results_q.put("END")
             print("Finished calculating capacitance")
-            for p in processes:
-                p.terminate()
+            # for p in processes:
+            #     p.terminate()
 
             resultsProcess.join()
     print("in ", time.time() - start, " seconds")
