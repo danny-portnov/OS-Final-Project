@@ -110,14 +110,9 @@ def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatri
 # writing to file the resistance and capacitance of each wire
 
 
-def write_to_file(filename, results_q):
+def write_to_file(filename:str, results_q):
     # adding or converting existing extension to .res
-    fields = filename.split('.')
-    if len(fields) >= 2:
-        fields[-1] = 'res'
-        outfile = '.'.join(fields)
-    else:
-        outfile = filename + '.res'
+    outfile = filename.replace("dat", "res")
 
     results = []
     while True:
@@ -127,13 +122,13 @@ def write_to_file(filename, results_q):
         results.append(item)
 
     print("Writing results to file...")
-    # alphabetic sorting
-    results.sort(key=lambda x: x[0])
+    # Natural sorting
+    # Assuming the wire name always starts with "net"
+    results.sort(key=lambda x: int(x[0][3:]))
 
     with open(outfile, 'w') as fw:
-        for res in results:
-            fw.write(
-                f"{res[0].ljust(20)} {str(res[1]).ljust(8)} {str(res[2]).ljust(8)}\n")
+        for wireName, resistance, capacitance  in results:
+            fw.write(f"{wireName:<20} {resistance:<8} {capacitance:<8}\n")
     print(f"{len(results)} wires calculated and exported to {outfile}")
 
 
