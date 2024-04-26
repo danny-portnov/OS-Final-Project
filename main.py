@@ -142,8 +142,6 @@ def main():
     start = time.time()
 
     for filename in files:
-        if filename != "cir1000.dat":
-            continue
         threads = []
         wires_q = Queue()
         results_q = Queue()
