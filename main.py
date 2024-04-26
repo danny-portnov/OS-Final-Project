@@ -15,7 +15,10 @@ def InitMatricesAndCalResistance(fileQ, wires_q, verticalMatrix, hortizontalMatr
         y_vector = []
         wire_r = 0
         # fields - "(0,20),(20,20),(20,48),(48,48),(48,32)" for example
-        wire_name, fields = fileQ.get()
+        item = fileQ.get()
+        if item == 'END':
+            return
+        wire_name, fields = item
         # vector - ["0,20","20,20","20,48","48,48","48,32"] for example
         vector = fields[1:-1].split('),(')
         for v in vector:
@@ -170,7 +173,7 @@ def main():
                 threads.append(t)
             fileQ.join()
             for t in threads:
-                wires_q.put("END")
+                fileQ.put("END")
             print("Calculating capacitance...")
             threads = []
     # num_wires = wires_q.qsize()
