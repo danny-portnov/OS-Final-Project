@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from multiprocessing import Process, JoinableQueue, Lock, Queue
+from multiprocessing import JoinableQueue, Lock, Queue
 from threading import Thread
 import time
 import os
@@ -144,7 +144,7 @@ def main():
     for filename in files:
         if filename != "cir1000.dat":
             continue
-        processes = []
+        threads = []
         wires_q = Queue()
         results_q = Queue()
         fileQ = JoinableQueue()
@@ -162,38 +162,34 @@ def main():
             hortizontalMatrix = [[0 for _ in range(int(y_size))]
                                  for _ in range(int(x_size))]
             print("Reading wires from file...")
-            readProcess = Process(target=read_wire, args=(lines, fileQ))
-            readProcess.start()  # todo: if terminate is not needed, do it one line
-            processes = []
+            readThread = Thread(target=read_wire, args=(lines, fileQ))
+            readThread.start()  # todo: if terminate is not needed, do it one line
+            threads = []
             for _ in range(cpu_num):
-                p = Process(target=InitMatricesAndCalResistance, args=(
+                t = Thread(target=InitMatricesAndCalResistance, args=(
                     fileQ, wires_q, verticalMatrix, hortizontalMatrix))
-                p.start()
-                processes.append(p)
+                t.start()
+                threads.append(t)
             fileQ.join()
-            for p in processes:
-                # p.terminate()
+            for t in threads:
                 wires_q.put("END")
-            # readProcess.terminate()
             print("Calculating capacitance...")
-            processes = []
+            threads = []
     # num_wires = wires_q.qsize()
             for _ in range(cpu_num):
-                p = Process(target=calc_cap, args=(
+                t = Thread(target=calc_cap, args=(
                     wires_q, results_q, verticalMatrix, hortizontalMatrix))
-                p.start()
-                processes.append(p)
-            resultsProcess = Process(target=write_to_file,
+                t.start()
+                threads.append(t)
+            resultsThread = Thread(target=write_to_file,
                                      args=(filename, results_q))
-            resultsProcess.start()
-            for p in processes:
-                p.join()
+            resultsThread.start()
+            for t in threads:
+                t.join()
             results_q.put("END")
             print("Finished calculating capacitance")
-            # for p in processes:
-            #     p.terminate()
 
-            resultsProcess.join()
+            resultsThread.join()
     print("in ", time.time() - start, " seconds")
 
 
