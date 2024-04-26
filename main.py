@@ -3,7 +3,6 @@ from multiprocessing import Process, JoinableQueue, Lock, Queue
 from threading import Thread
 import time
 import os
-import numpy as np
 
 file_lock = Lock()
 
