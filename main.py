@@ -111,9 +111,6 @@ def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatri
 
 
 def write_to_file(filename:str, results_q):
-    # adding or converting existing extension to .res
-    outfile = filename.replace("dat", "res")
-
     results = []
     while True:
         item = results_q.get()
@@ -126,6 +123,8 @@ def write_to_file(filename:str, results_q):
     # Assuming the wire name always starts with "net"
     results.sort(key=lambda x: int(x[0][3:]))
 
+    # The file ends with ".dat"
+    outfile = filename.replace("dat", "res")
     with open(outfile, 'w') as fw:
         for wireName, resistance, capacitance  in results:
             fw.write(f"{wireName:<20} {resistance:<8} {capacitance:<8}\n")
@@ -135,8 +134,10 @@ def write_to_file(filename:str, results_q):
 def main():
     # cpu_num = int(input("Enter the number of CPUs to use: "))
     cpu_num = 2  # For debug
-    files = [f for f in os.listdir(os.path.join(
-        os.getcwd(), 'working_circuits_0104')) if f.endswith('.dat')]
+    directoryToProcess = os.path.join(
+        os.getcwd(), 'working_circuits_0104')
+    # Taking only files that end with ".dat"
+    files = [f for f in os.listdir(directoryToProcess) if f.endswith('.dat')]
     start = time.time()
 
     for filename in files:
@@ -144,7 +145,7 @@ def main():
         wires_q = Queue()
         results_q = Queue()
         fileQ = JoinableQueue()
-        filePath = os.path.join(os.getcwd(), 'working_circuits_0104', filename)
+        filePath = os.path.join(directoryToProcess, filename)
         with open(filePath) as f:
             lines = f.readlines()
         print(f"File {filename} loaded successfully")
