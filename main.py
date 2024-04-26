@@ -57,7 +57,7 @@ def read_wire(file_handler, fileQ):
 
 # calculating capacitance of wires with threads so each thread works on one wire
 # at a given time
-num = 0
+# num = 0
 
 def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
     # The x dimension of the matrix is the length of some row
@@ -65,13 +65,13 @@ def calc_cap(wires_q, results_q, verticalMatrix, hortizontalMatrix):
     # The y dimension of the matrix is the amount of rows
     size_y = len(verticalMatrix)
     while True:
-        print(f"Before: p = {current_process()}")
+        # print(f"Before: p = {current_process()}")
         wire = wires_q.get()
         if wire == "END":
             break
-        global num
-        num+=1
-        print(f"After: {num}, p = {current_process()}")
+        # global num
+        # num+=1
+        # print(f"After: {num}, p = {current_process()}")
         cap = 0
         wire_name = wire[0]
         wire_res = wire[1]
@@ -139,9 +139,9 @@ def main():
     cpu_num = 4  # For debug
     files = [f for f in os.listdir(os.path.join(
         os.getcwd(), 'working_circuits_0104')) if f.endswith('.dat')]
-    start = time.time()
 
     for filename in files:
+        start = time.time()
         # filename = "cir1000.dat"
         processes = []
         wires_q = Manager().Queue()
