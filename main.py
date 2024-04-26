@@ -1,14 +1,10 @@
 #!/usr/bin/env python
-from multiprocessing import JoinableQueue, Lock, Queue
+from multiprocessing import JoinableQueue, Queue
 from threading import Thread
 import time
 import os
 
-file_lock = Lock()
-
-# reading wires from file so each thread reads one line at a given time (with file_lock for sync)
-
-
+# reading wires from file so each thread reads one line at a given time
 def InitMatricesAndCalResistance(fileQ, wires_q, verticalMatrix, hortizontalMatrix):
     while True:
         x_vector = []
@@ -48,7 +44,7 @@ def InitMatricesAndCalResistance(fileQ, wires_q, verticalMatrix, hortizontalMatr
 
         wires_q.put((wire_name, wire_r, (x_vector, y_vector)))
         fileQ.task_done()
-        print(f"Wire {wire_name} calculated")
+        # print(f"Wire {wire_name} calculated")
 
 
 def read_wire(file_handler, fileQ):
@@ -71,7 +67,7 @@ def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatri
             wire = wires_q.get()
             if wire == 'END':
                 return
-            print(f"Got wire {wire[0]}'s for capacitance")
+            # print(f"Got wire {wire[0]}'s for capacitance")
         except:
             print("Timeout")
             break
@@ -105,7 +101,7 @@ def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatri
                         cap += hortizontalMatrix[row][column]
 
         results_q.put((wire_name, wire_res, cap))
-        print(f"Wire {wire_name}'s capacitance calculated")
+        # print(f"Wire {wire_name}'s capacitance calculated")
 
 # writing to file the resistance and capacitance of each wire
 
@@ -148,19 +144,21 @@ def main():
         filePath = os.path.join(directoryToProcess, filename)
         with open(filePath) as f:
             lines = f.readlines()
-        print(f"File {filename} loaded successfully")
+        print(f"{time.time()}: File {filename} loaded successfully")
         _, x_size, y_size = lines.pop(0).strip().split()
+        # Start to read the file before builiding the matrices, as it takes time
+        print(f"{time.time()}: Reading wires from file...")
+        readThread = Thread(target=read_wire, args=(lines, fileQ))
+        readThread.start()  # todo: if terminate is not needed, do it one line
         # 2 matrices with (x_size x y_size) shape for sharing between threads
         # one is for horizontal lines and the other is for vertical lines
         # we'll use them for calculating the capacitance of each wire
-
+        print(f"{time.time()}: Building matrices...")
         verticalMatrix = [[0 for _ in range(int(y_size))]
                             for _ in range(int(x_size))]
         hortizontalMatrix = [[0 for _ in range(int(y_size))]
                                 for _ in range(int(x_size))]
-        print("Reading wires from file...")
-        readThread = Thread(target=read_wire, args=(lines, fileQ))
-        readThread.start()  # todo: if terminate is not needed, do it one line
+        print(f"{time.time()}: Finished building matrices")
         threads = []
         for _ in range(cpu_num):
             t = Thread(target=InitMatricesAndCalResistance, args=(
@@ -170,7 +168,7 @@ def main():
         fileQ.join()
         for t in threads:
             fileQ.put("END")
-        print("Calculating capacitance...")
+        print(f"{time.time()}: Calculating capacitance...")
         threads = []
         for _ in range(cpu_num):
             t = Thread(target=calc_cap, args=(
@@ -185,7 +183,7 @@ def main():
         for t in threads: # Wait for threads to end
             t.join()
         results_q.put("END")
-        print("Finished calculating capacitance")
+        print(f"{time.time()}: Finished calculating capacitance")
 
         resultsThread.join()
     print("in ", time.time() - start, " seconds")
