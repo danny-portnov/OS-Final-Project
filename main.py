@@ -176,7 +176,6 @@ def main():
                 fileQ.put("END")
             print("Calculating capacitance...")
             threads = []
-    # num_wires = wires_q.qsize()
             for _ in range(cpu_num):
                 t = Thread(target=calc_cap, args=(
                     wires_q, results_q, verticalMatrix, hortizontalMatrix))
@@ -185,7 +184,9 @@ def main():
             resultsThread = Thread(target=write_to_file,
                                      args=(filename, results_q))
             resultsThread.start()
-            for t in threads:
+            for t in threads: # All data was read from file, signal the threads to end
+                wires_q.put("END")
+            for t in threads: # Wait for threads to end
                 t.join()
             results_q.put("END")
             print("Finished calculating capacitance")
