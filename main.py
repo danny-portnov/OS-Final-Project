@@ -4,47 +4,47 @@ from threading import Thread
 import time
 import os
 
-# reading wires from file so each thread reads one line at a given time
-def InitMatricesAndCalResistance(fileQ, wires_q, verticalMatrix, hortizontalMatrix):
+
+def InitMatricesAndCalResistance(fileQ, wiresQ, verticalMatrix, hortizontalMatrix):
+    # reading wires from file so each thread reads one line at a given time
     while True:
-        x_vector = []
-        y_vector = []
-        wire_r = 0
-        # fields - "(0,20),(20,20),(20,48),(48,48),(48,32)" for example
+        xVector = []
+        yVector = []
+        wireResistance = 0
         item = fileQ.get()
         if item == 'END':
             return
+        # fields - "(0,20),(20,20),(20,48),(48,48),(48,32)" for example
         wire_name, fields = item
         # vector - ["0,20","20,20","20,48","48,48","48,32"] for example
         vector = fields[1:-1].split('),(')
         for v in vector:
             x, y = v.split(',')
-            x_vector.append(int(x))
-            y_vector.append(int(y))
+            xVector.append(int(x))
+            yVector.append(int(y))
 
-        for i in range(1, len(x_vector)):
-            wire_r += abs(x_vector[i] - x_vector[i-1]) + \
-                abs(y_vector[i] - y_vector[i-1])
+        for i in range(1, len(xVector)):
+            wireResistance += abs(xVector[i] - xVector[i-1]) + \
+                abs(yVector[i] - yVector[i-1])
 
             # horizontal line
-            if (y_vector[i] == y_vector[i-1]):
-                min_x = min(x_vector[i], x_vector[i-1])
-                max_x = max(x_vector[i], x_vector[i-1])
+            if (yVector[i] == yVector[i-1]):
+                min_x = min(xVector[i], xVector[i-1])
+                max_x = max(xVector[i], xVector[i-1])
                 # inserting 1's in (L x 1) segment
                 for column in range(min_x, max_x):
-                    hortizontalMatrix[y_vector[i]][column] = 1
+                    hortizontalMatrix[yVector[i]][column] = 1
 
             # vertical line
             else:
-                min_y = min(y_vector[i], y_vector[i-1])
-                max_y = max(y_vector[i], y_vector[i-1])
+                min_y = min(yVector[i], yVector[i-1])
+                max_y = max(yVector[i], yVector[i-1])
                 # inserting 1's in (1 x L) segment
                 for row in range(min_y, max_y):
-                    verticalMatrix[row][x_vector[i]] = 1
+                    verticalMatrix[row][xVector[i]] = 1
 
-        wires_q.put((wire_name, wire_r, (x_vector, y_vector)))
+        wiresQ.put((wire_name, wireResistance, (xVector, yVector)))
         fileQ.task_done()
-        # print(f"Wire {wire_name} calculated")
 
 
 def read_wire(file_handler, fileQ):
@@ -53,63 +53,56 @@ def read_wire(file_handler, fileQ):
     print("Finished reading from file")
 
 
-# calculating capacitance of wires with threads so each thread works on one wire
-# at a given time
-
-
-def calc_cap(wires_q: JoinableQueue, results_q, verticalMatrix, hortizontalMatrix):
+def CalculateCapacitance(wiresQ: JoinableQueue, resultsQ, verticalMatrix, hortizontalMatrix):
+    # calculating capacitance of wires with threads so each thread works on one wire
+    # at a given time
     # The x dimension of the matrix is the length of some row
-    size_x = len(verticalMatrix[0])
+    # (which is the amount of columns)
+    amountOfColumns = len(verticalMatrix[0])
     # The y dimension of the matrix is the amount of rows
-    size_y = len(verticalMatrix)
+    amountOfRows = len(verticalMatrix)
     while True:
-        try:
-            wire = wires_q.get()
-            if wire == 'END':
-                return
-            # print(f"Got wire {wire[0]}'s for capacitance")
-        except:
-            print("Timeout")
-            break
-        cap = 0
-        wire_name = wire[0]
-        wire_res = wire[1]
+        wire = wiresQ.get()
+        if wire == 'END':
+            return
+        capacitance = 0
+        wireName = wire[0]
+        wireResistance = wire[1]
         x = wire[2][0]
         y = wire[2][1]
         for i in range(1, len(x)):
             # check for line type - horizontal or vertical
             vertical = x[i] == x[i-1]
-            min_x = min(x[i], x[i-1])
-            max_x = max(x[i], x[i-1])
-            min_y = min(y[i], y[i-1])
-            max_y = max(y[i], y[i-1])
+            minX = min(x[i], x[i-1])
+            maxX = max(x[i], x[i-1])
+            minY = min(y[i], y[i-1])
+            maxY = max(y[i], y[i-1])
             if vertical:
                 # summing capacity 4 columns to the left and right of the vertical line
-                for column in range(max(0, min_x-4), min(min_x+5, size_x)):
+                for column in range(max(0, minX-4), min(minX+5, amountOfColumns)):
                     # Skip the column of the current wire
-                    if column == min_x:
+                    if column == minX:
                         continue
-                    for row in range(min_y, max_y):
-                        cap += verticalMatrix[row][column]
+                    for row in range(minY, maxY):
+                        capacitance += verticalMatrix[row][column]
             else:
                 # summing capacity 4 rows to the top and bottom of the horizontal line
-                for row in range(max(0, min_y-4), min(min_y+5, size_y)):
+                for row in range(max(0, minY-4), min(minY+5, amountOfRows)):
                     # Skip the row of the current wire
-                    if row == min_y:
+                    if row == minY:
                         continue
-                    for column in range(min_x, max_x):
-                        cap += hortizontalMatrix[row][column]
+                    for column in range(minX, maxX):
+                        capacitance += hortizontalMatrix[row][column]
 
-        results_q.put((wire_name, wire_res, cap))
+        resultsQ.put((wireName, wireResistance, capacitance))
         # print(f"Wire {wire_name}'s capacitance calculated")
 
-# writing to file the resistance and capacitance of each wire
 
-
-def write_to_file(filename:str, results_q):
+def SaveResultsToFile(fileName: str, resultsQ):
+    # writing to file the resistance and capacitance of each wire
     results = []
     while True:
-        item = results_q.get()
+        item = resultsQ.get()
         if item == 'END':
             break
         results.append(item)
@@ -120,16 +113,16 @@ def write_to_file(filename:str, results_q):
     results.sort(key=lambda x: int(x[0][3:]))
 
     # The file ends with ".dat"
-    outfile = filename.replace("dat", "res")
+    outfile = fileName.replace("dat", "res")
     with open(outfile, 'w') as fw:
-        for wireName, resistance, capacitance  in results:
+        for wireName, resistance, capacitance in results:
             fw.write(f"{wireName:<20} {resistance:<8} {capacitance:<8}\n")
     print(f"{len(results)} wires calculated and exported to {outfile}")
 
 
 def main():
-    # cpu_num = int(input("Enter the number of CPUs to use: "))
-    cpu_num = 2  # For debug
+    cpu_num = int(input("Enter the number of threads to use: "))
+    # cpu_num = 2  # For debug
     directoryToProcess = os.path.join(
         os.getcwd(), 'working_circuits_0104')
     # Taking only files that end with ".dat"
@@ -138,31 +131,30 @@ def main():
 
     for filename in files:
         threads = []
-        wires_q = Queue()
-        results_q = Queue()
+        wiresQ = Queue()
+        resultsQ = Queue()
         fileQ = JoinableQueue()
         filePath = os.path.join(directoryToProcess, filename)
         with open(filePath) as f:
             lines = f.readlines()
         print(f"{time.time()}: File {filename} loaded successfully")
-        _, x_size, y_size = lines.pop(0).strip().split()
+        _, xSize, ySize = lines.pop(0).strip().split()
         # Start to read the file before builiding the matrices, as it takes time
         print(f"{time.time()}: Reading wires from file...")
-        readThread = Thread(target=read_wire, args=(lines, fileQ))
-        readThread.start()  # todo: if terminate is not needed, do it one line
-        # 2 matrices with (x_size x y_size) shape for sharing between threads
+        Thread(target=read_wire, args=(lines, fileQ)).start()
+        # 2 matrices with (xSize x ySize) shape for sharing between threads
         # one is for horizontal lines and the other is for vertical lines
         # we'll use them for calculating the capacitance of each wire
         print(f"{time.time()}: Building matrices...")
-        verticalMatrix = [[0 for _ in range(int(y_size))]
-                            for _ in range(int(x_size))]
-        hortizontalMatrix = [[0 for _ in range(int(y_size))]
-                                for _ in range(int(x_size))]
+        verticalMatrix = [[0 for _ in range(int(ySize))]
+                          for _ in range(int(xSize))]
+        hortizontalMatrix = [[0 for _ in range(int(ySize))]
+                             for _ in range(int(xSize))]
         print(f"{time.time()}: Finished building matrices")
         threads = []
         for _ in range(cpu_num):
             t = Thread(target=InitMatricesAndCalResistance, args=(
-                fileQ, wires_q, verticalMatrix, hortizontalMatrix))
+                fileQ, wiresQ, verticalMatrix, hortizontalMatrix))
             t.start()
             threads.append(t)
         fileQ.join()
@@ -171,18 +163,18 @@ def main():
         print(f"{time.time()}: Calculating capacitance...")
         threads = []
         for _ in range(cpu_num):
-            t = Thread(target=calc_cap, args=(
-                wires_q, results_q, verticalMatrix, hortizontalMatrix))
+            t = Thread(target=CalculateCapacitance, args=(
+                wiresQ, resultsQ, verticalMatrix, hortizontalMatrix))
             t.start()
             threads.append(t)
-        resultsThread = Thread(target=write_to_file,
-                                    args=(filename, results_q))
+        resultsThread = Thread(target=SaveResultsToFile,
+                               args=(filename, resultsQ))
         resultsThread.start()
-        for t in threads: # All data was read from file, signal the threads to end
-            wires_q.put("END")
-        for t in threads: # Wait for threads to end
+        for t in threads:  # All data was read from file, signal the threads to end
+            wiresQ.put("END")
+        for t in threads:  # Wait for threads to end
             t.join()
-        results_q.put("END")
+        resultsQ.put("END")
         print(f"{time.time()}: Finished calculating capacitance")
 
         resultsThread.join()
