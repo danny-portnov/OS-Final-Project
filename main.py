@@ -47,7 +47,7 @@ def InitMatricesAndCalResistance(fileQ, wiresQ, verticalMatrix, hortizontalMatri
         fileQ.task_done()
 
 
-def read_wire(file_handler, fileQ):
+def ReadFromWiresFile(file_handler, fileQ):
     for line in file_handler:
         fileQ.put(line.strip().split())
     print("Finished reading from file")
@@ -141,7 +141,8 @@ def main():
         _, xSize, ySize = lines.pop(0).strip().split()
         # Start to read the file before builiding the matrices, as it takes time
         print(f"{time.time()}: Reading wires from file...")
-        Thread(target=read_wire, args=(lines, fileQ)).start()
+        readThread = Thread(target=ReadFromWiresFile, args=(lines, fileQ))
+        readThread.start()
         # 2 matrices with (xSize x ySize) shape for sharing between threads
         # one is for horizontal lines and the other is for vertical lines
         # we'll use them for calculating the capacitance of each wire
@@ -157,8 +158,9 @@ def main():
                 fileQ, wiresQ, verticalMatrix, hortizontalMatrix))
             t.start()
             threads.append(t)
+        readThread.join()
         fileQ.join()
-        for t in threads:
+        for t in threads:  # All data was read from file, signal the threads to end
             fileQ.put("END")
         print(f"{time.time()}: Calculating capacitance...")
         threads = []
@@ -170,7 +172,7 @@ def main():
         resultsThread = Thread(target=SaveResultsToFile,
                                args=(filename, resultsQ))
         resultsThread.start()
-        for t in threads:  # All data was read from file, signal the threads to end
+        for t in threads:  # Signal capacitance threads to end
             wiresQ.put("END")
         for t in threads:  # Wait for threads to end
             t.join()
