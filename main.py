@@ -24,8 +24,7 @@ def InitMatricesAndCalResistance(fileQ, wiresQ, verticalMatrix, hortizontalMatri
             yVector.append(int(y))
 
         for i in range(1, len(xVector)):
-            wireResistance += abs(xVector[i] - xVector[i-1]) + \
-                abs(yVector[i] - yVector[i-1])
+            wireResistance += abs(xVector[i] - xVector[i-1]) + abs(yVector[i] - yVector[i-1])
 
             # horizontal line
             if (yVector[i] == yVector[i-1]):
@@ -123,8 +122,7 @@ def SaveResultsToFile(fileName: str, resultsQ):
 def main():
     cpu_num = int(input("Enter the number of threads to use: "))
     # cpu_num = 2  # For debug
-    directoryToProcess = os.path.join(
-        os.getcwd(), 'working_circuits_0104')
+    directoryToProcess = os.path.join(os.getcwd(), 'working_circuits_0104')
     # Taking only files that end with ".dat"
     files = [f for f in os.listdir(directoryToProcess) if f.endswith('.dat')]
     start = time.time()
@@ -137,50 +135,47 @@ def main():
         filePath = os.path.join(directoryToProcess, filename)
         with open(filePath) as f:
             lines = f.readlines()
-        print(f"{time.time()}: File {filename} loaded successfully")
+        print(f"File {filename} loaded successfully")
         _, xSize, ySize = lines.pop(0).strip().split()
         # Start to read the file before builiding the matrices, as it takes time
-        print(f"{time.time()}: Reading wires from file...")
+        print("Reading wires from file...")
         readThread = Thread(target=ReadFromWiresFile, args=(lines, fileQ))
         readThread.start()
         # 2 matrices with (xSize x ySize) shape for sharing between threads
         # one is for horizontal lines and the other is for vertical lines
         # we'll use them for calculating the capacitance of each wire
-        print(f"{time.time()}: Building matrices...")
-        verticalMatrix = [[0 for _ in range(int(ySize))]
-                          for _ in range(int(xSize))]
-        hortizontalMatrix = [[0 for _ in range(int(ySize))]
-                             for _ in range(int(xSize))]
-        print(f"{time.time()}: Finished building matrices")
+        print("Building matrices...")
+        verticalMatrix = [[0 for _ in range(int(ySize))] for _ in range(int(xSize))]
+        hortizontalMatrix = [[0 for _ in range(int(ySize))] for _ in range(int(xSize))]
+        print("Finished building matrices")
         threads = []
         for _ in range(cpu_num):
-            t = Thread(target=InitMatricesAndCalResistance, args=(
-                fileQ, wiresQ, verticalMatrix, hortizontalMatrix))
+            t = Thread(target=InitMatricesAndCalResistance, args=(fileQ, wiresQ, verticalMatrix, hortizontalMatrix))
             t.start()
             threads.append(t)
         readThread.join()
         fileQ.join()
         for t in threads:  # All data was read from file, signal the threads to end
             fileQ.put("END")
-        print(f"{time.time()}: Calculating capacitance...")
+        print("Calculating capacitance...")
         threads = []
         for _ in range(cpu_num):
-            t = Thread(target=CalculateCapacitance, args=(
-                wiresQ, resultsQ, verticalMatrix, hortizontalMatrix))
+            t = Thread(target=CalculateCapacitance, args=(wiresQ, resultsQ, verticalMatrix, hortizontalMatrix))
             t.start()
             threads.append(t)
-        resultsThread = Thread(target=SaveResultsToFile,
-                               args=(filename, resultsQ))
+        resultsThread = Thread(target=SaveResultsToFile,args=(filename, resultsQ))
         resultsThread.start()
         for t in threads:  # Signal capacitance threads to end
             wiresQ.put("END")
         for t in threads:  # Wait for threads to end
             t.join()
         resultsQ.put("END")
-        print(f"{time.time()}: Finished calculating capacitance")
+        print("Finished calculating capacitance")
 
         resultsThread.join()
-    print("in ", time.time() - start, " seconds")
+        print(f"Finished processing file: {filename} in {(time.time() - start)} seconds")
+        print()
+    print(f"Finished processing all files in {(time.time() - start)} seconds")
 
 
 if __name__ == '__main__':
