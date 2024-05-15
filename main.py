@@ -27,7 +27,7 @@ def InitMatricesAndCalResistance(fileQ, wiresQ, verticalMatrix, hortizontalMatri
             wireResistance += abs(xVector[i] - xVector[i-1]) + abs(yVector[i] - yVector[i-1])
 
             # horizontal line
-            if (yVector[i] == yVector[i-1]):
+            if yVector[i] == yVector[i-1]:
                 min_x = min(xVector[i], xVector[i-1])
                 max_x = max(xVector[i], xVector[i-1])
                 # inserting 1's in (L x 1) segment
