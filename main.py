@@ -24,7 +24,8 @@ def InitMatricesAndCalResistance(fileQ, wiresQ, verticalMatrix, hortizontalMatri
             yVector.append(int(y))
 
         for i in range(1, len(xVector)):
-            wireResistance += abs(xVector[i] - xVector[i-1]) + abs(yVector[i] - yVector[i-1])
+            wireResistance += abs(xVector[i] - xVector[i-1]) + \
+                abs(yVector[i] - yVector[i-1])
 
             # horizontal line
             if yVector[i] == yVector[i-1]:
@@ -120,8 +121,8 @@ def SaveResultsToFile(fileName: str, resultsQ):
 
 
 def main():
-    cpu_num = int(input("Enter the number of threads to use: "))
-    # cpu_num = 2  # For debug
+    numberOfThreads = int(input("Enter the number of threads to use: "))
+    # numberOfThreads = 2  # For debug
     directoryToProcess = os.path.join(os.getcwd(), 'working_circuits_0104')
     # Taking only files that end with ".dat"
     files = [f for f in os.listdir(directoryToProcess) if f.endswith('.dat')]
@@ -145,12 +146,15 @@ def main():
         # one is for horizontal lines and the other is for vertical lines
         # we'll use them for calculating the capacitance of each wire
         print("Building matrices...")
-        verticalMatrix = [[0 for _ in range(int(ySize))] for _ in range(int(xSize))]
-        hortizontalMatrix = [[0 for _ in range(int(ySize))] for _ in range(int(xSize))]
+        verticalMatrix = [[0 for _ in range(int(ySize))]
+                          for _ in range(int(xSize))]
+        hortizontalMatrix = [
+            [0 for _ in range(int(ySize))] for _ in range(int(xSize))]
         print("Finished building matrices")
         threads = []
-        for _ in range(cpu_num):
-            t = Thread(target=InitMatricesAndCalResistance, args=(fileQ, wiresQ, verticalMatrix, hortizontalMatrix))
+        for _ in range(numberOfThreads):
+            t = Thread(target=InitMatricesAndCalResistance, args=(
+                fileQ, wiresQ, verticalMatrix, hortizontalMatrix))
             t.start()
             threads.append(t)
         readThread.join()
@@ -159,11 +163,13 @@ def main():
             fileQ.put("END")
         print("Calculating capacitance...")
         threads = []
-        for _ in range(cpu_num):
-            t = Thread(target=CalculateCapacitance, args=(wiresQ, resultsQ, verticalMatrix, hortizontalMatrix))
+        for _ in range(numberOfThreads):
+            t = Thread(target=CalculateCapacitance, args=(
+                wiresQ, resultsQ, verticalMatrix, hortizontalMatrix))
             t.start()
             threads.append(t)
-        resultsThread = Thread(target=SaveResultsToFile,args=(filename, resultsQ))
+        resultsThread = Thread(target=SaveResultsToFile,
+                               args=(filename, resultsQ))
         resultsThread.start()
         for t in threads:  # Signal capacitance threads to end
             wiresQ.put("END")
@@ -173,7 +179,8 @@ def main():
         print("Finished calculating capacitance")
 
         resultsThread.join()
-        print(f"Finished processing file: {filename} in {(time.time() - start)} seconds")
+        print(
+            f"Finished processing file: {filename} in {(time.time() - start)} seconds")
         print()
     print(f"Finished processing all files in {(time.time() - start)} seconds")
 
