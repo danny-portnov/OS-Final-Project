@@ -122,7 +122,6 @@ def SaveResultsToFile(fileName: str, resultsQ):
 
 def main():
     numberOfThreads = int(input("Enter the number of threads to use: "))
-    # numberOfThreads = 2  # For debug
     directoryToProcess = os.path.join(os.getcwd(), 'working_circuits_0104')
     # Taking only files that end with ".dat"
     files = [f for f in os.listdir(directoryToProcess) if f.endswith('.dat')]
